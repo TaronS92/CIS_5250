@@ -1,0 +1,104 @@
+Data set Credit: https://www.kaggle.com/dhruvildave/top-play-store-games
+Project Contributors: Jasmine Diep and Taron Sarksyan (12/14/2021)
+
+#Importing and viewing the data set to RStudio
+> setwd("Your RStudio Directory")
+> library(readr)
+> android_games <- read_csv("android-games.csv")
+> View(android_games)
+
+#Extracting rows with duplicate titles
+> duplicate_titles<-android_games[duplicated(android_games$title),]
+> View(duplicate_titles)
+
+#Extracting rows to identify which categories have a price
+> library(dplyr) 
+> price_not_zero<-filter(android_games, price != "0") 
+> View(price_not_zero)
+
+#Deleting rows of categories with duplicate titles. Also, deleting rows for categories that did not contain a price.
+> android_games<-filter(android_games, !(category %in% c("GAME ACTION", "GAME ADVENTURE", "GAME BOARD", "GAME CARD", "GAME CASINO", "GAME CASUAL", "GAME EDUCATIONAL", "GAME PUZZLE", "GAME RACING", "GAME SIMULATION", "GAME SPORTS", "GAME STRATEGY", "GAME WORD")))
+
+#Removing the letter "M" from the values in the "installs" column
+> android_games$installs=gsub("\\M", "",android_games$installs)
+
+#Changing the field type of the “installs” column to integers.
+> android_games$installs<-as.integer(android_games$installs)
+
+#Removing rows with “NA” values.
+> android_games<-na.omit(android_games)
+
+#Renaming the “installs” column to “installs in millions.”
+> names(android_games)[names(android_games) == "installs"]<-"installs in millions"
+
+#Cleaning column names for all columns.
+> library(janitor)
+> android_games <- android_games %>%
++ clean_names
+
+#Removing unused columns: rank, title, average_rating, growth_(30 days), growth_(60 days), and paid.
+> android_games$rank <- android_games$title <- android_games$average_rating <- android_games$growth_30_days <- android_games$growth_60_days <- android_games$paid <- NULL
+
+#Creating a data frame to view only the game category and installations in millions.
+> android_games_installs <- android_games %>%
+> clean_names %>%
+> select(category,installs_in_millions)
+> View(android_games_installs)
+
+#Creating a data frame to group the installations in millions as totals for each game category.
+> android_games_installs_sum <- android_games_installs %>% 
++ group_by(category) %>% 
++ summarize(total_installs = sum(installs_in_millions)) 
+> View(android_games_installs_sum)
+
+#Creating the column chart for the analysis of: "What is the total number of installs in millions for each game category?"
+> ggplot(android_games_installs_sum, aes(x= total_installs, y=reorder(category, -total_installs), fill=category)) + geom_bar(stat = "identity") + geom_text(aes(label = total_installs)) + scale_fill_discrete(name = "Category", guide=guide_legend(reverse=T)) + labs(title= "Total Installs by Category", x = "Installs in Millions", y = "Category") + theme(panel.background=element_blank()) + scale_x_continuous(name="Installs in Millions", limits=c(0,8000))
+
+#Creating a data frame to view the different number of star ratings by category.
+> android_games_ratings <- android_games %>%
++ clean_names %>%
++ select(category:x1_star_ratings)
+> View(android_games_ratings)
+
+#Creating a data frame to gather and consolidate all the star ratings into two columns: Ratings and Values.
+> library(tidyverse)
+> android_games_ratings_format <- android_games_ratings %>%
++ gather(key = "Ratings", value = "Values", 2:6)
+> View(android_games_ratings_format)
+
+#Creating the stacked column chart for the analysis of: "What are the total star ratings for each numbered star rating by category?"
+> ggplot(android_games_ratings_format, aes(x= reorder(category, Values), y=Values, fill = Ratings)) + geom_bar(stat="identity", position="stack") + geom_text(aes(label = Values), position = position_stack(vjust=0.5), size=3) + scale_fill_discrete(guide=guide_legend(reverse=T)) + labs(x="Category", y="Values", title = "Number Ratings by Category") + theme(panel.background=element_blank()) + scale_y_continuous(labels=unit_format(unit = "M", scale = 1e+00)) + coord_flip()
+
+#Creating a data frame to view the price by game category.
+> android_games_price <- android_games %>%
++ clean_names %>%
++ select(price, category)
+> View(android_games_price)
+
+#Creating a data frame to sum the values of price for each game category.
+> android_games_price_sum <- android_games_cleaned_price %>%
++ group_by(category) %>%
++ summarize(total_price = sum(price))
+> View(android_games_price_sum)
+
+#Creating the pie chart for the analysis of: "What are the total prices for each game category?"
+> ggplot(android_games_price_sum, aes(x="", y=total_price, fill=category)) + geom_bar(stat="identity", width=1) + coord_polar("y", start=0) + geom_text(aes(label = dollar(total_price)), position = position_stack(vjust=0.5), size=3) + scale_fill_discrete(name = "Category", guide=guide_legend(reverse=T)) + labs(x = NULL, y=NULL, title = "Price by Category") + theme(axis.line = element_blank(), axis.ticks = element_blank()) + theme_void()
+
+#Overall View of Statistical Summary
+> summary(android_games)
+
+#Statistical Summary of Total Ratings
+> summary(android_games$total_ratings)
+> min(android_games$total_ratings)
+> max(android_games$total_ratings)
+> mean(android_games$total_ratings)
+> median(android_games$total_ratings)
+> sd(android_games$total_ratings)
+
+#Statistical Summary of Installs in Millions
+> summary(android_games$installs_in_millions)
+> min(android_games$installs_in_millions)
+> max(android_games$installs_in_millions)
+> mean(android_games$installs_in_millions)
+> median(android_games$installs_in_millions)
+> sd(android_games$installs_in_millions)
